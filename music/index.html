@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VizGenerator - Создание видео с визуализацией звука</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            color: white;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        h1 {
+            font-size: 3.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.8;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .controls-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            height: fit-content;
+        }
+
+        .control-group {
+            margin-bottom: 25px;
+        }
+
+        .control-group h3 {
+            margin-bottom: 15px;
+            color: #4ecdc4;
+            font-size: 1.1em;
+        }
+
+        .control-item {
+            margin-bottom: 12px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        input[type="range"], select, input[type="color"] {
+            width: 100%;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+        }
+
+        input[type="color"] {
+            height: 40px;
+            padding: 2px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input {
+            width: auto;
+        }
+
+        .visualizer-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #previewCanvas {
+            width: 100%;
+            height: 400px;
+            background: #000;
+            border-radius: 10px;
+        }
+
+        .upload-section {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: transform 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .record-btn {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: white;
+        }
+
+        .record-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .record-btn.recording {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #45b7d1 0%, #96ceb4 100%);
+            color: white;
+        }
+
+        .download-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .download-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+        }
+
+        .track-info {
+            text-align: center;
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+
+        .progress-container {
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background: linear-gradient(90deg, #4ecdc4, #45b7d1);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        .recording-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            display: none;
+        }
+
+        .recording-indicator.recording {
+            display: block;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        @media (max-width: 968px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>VizGenerator</h1>
+            <p class="subtitle">Создание видео с визуализацией звука</p>
+        </header>
+
+        <div class="upload-section">
+            <input type="file" id="audioUpload" class="file-input" accept="audio/*">
+            <button class="upload-btn" id="uploadBtn">
+                <span>🎵</span> Загрузить аудиофайл
+            </button>
+            <div class="track-info" id="trackInfo">
+                Загрузите MP3, WAV или OGG файл
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="controls-panel">
+                <div class="control-group">
+                    <h3>🎨 Стиль визуализации</h3>
+                    <div class="control-item">
+                        <label for="vizType">Тип визуализации</label>
+                        <select id="vizType">
+                            <option value="bars">Вертикальные бары</option>
+                            <option value="wave">Волновая форма</option>
+                            <option value="circle">Круглый спектр</option>
+                            <option value="particles">Частицы</option>
+                        </select>
+                    </div>
+                    <div class="control-item">
+                        <label for="barCount">Количество полосок</label>
+                        <input type="range" id="barCount" min="10" max="200" value="64">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>🎨 Цвета</h3>
+                    <div class="control-item">
+                        <label for="primaryColor">Основной цвет</label>
+                        <input type="color" id="primaryColor" value="#4ecdc4">
+                    </div>
+                    <div class="control-item">
+                        <label for="secondaryColor">Вторичный цвет</label>
+                        <input type="color" id="secondaryColor" value="#ff6b6b">
+                    </div>
+                    <div class="control-item">
+                        <label for="bgColor">Фон</label>
+                        <input type="color" id="bgColor" value="#000000">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>⚙️ Настройки</h3>
+                    <div class="control-item">
+                        <label for="sensitivity">Чувствительность</label>
+                        <input type="range" id="sensitivity" min="1" max="10" value="5" step="0.1">
+                    </div>
+                    <div class="control-item">
+                        <label for="smoothness">Плавность</label>
+                        <input type="range" id="smoothness" min="0.1" max="1" value="0.5" step="0.1">
+                    </div>
+                    <div class="control-item checkbox-group">
+                        <input type="checkbox" id="showWaveform" checked>
+                        <label for="showWaveform">Показывать волновую форму</label>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>📹 Видео настройки</h3>
+                    <div class="control-item">
+                        <label for="videoQuality">Качество видео</label>
+                        <select id="videoQuality">
+                            <option value="480">480p</option>
+                            <option value="720" selected>720p</option>
+                            <option value="1080">1080p</option>
+                        </select>
+                    </div>
+                    <div class="control-item">
+                        <label for="fps">Кадров в секунду</label>
+                        <input type="range" id="fps" min="24" max="60" value="30">
+                    </div>
+                </div>
+            </div>
+
+            <div class="visualizer-container">
+                <div class="recording-indicator" id="recordingIndicator">● Запись</div>
+                <canvas id="previewCanvas"></canvas>
+                
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress" id="progress"></div>
+                    </div>
+                    <div class="time-display">
+                        <span id="currentTime">0:00</span>
+                        <span id="duration">0:00</span>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="action-btn record-btn" id="recordBtn">🎥 Начать запись</button>
+                    <button class="action-btn download-btn" id="downloadBtn" disabled>💾 Скачать видео</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключаем библиотеки для записи видео -->
+    <script src="https://unpkg.com/ccapture.js@1.1.0/build/CCapture.all.min.js"></script>
+    
+    <script>
+        // Элементы DOM
+        const audioUpload = document.getElementById('audioUpload');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const trackInfo = document.getElementById('trackInfo');
+        const previewCanvas = document.getElementById('previewCanvas');
+        const recordBtn = document.getElementById('recordBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const recordingIndicator = document.getElementById('recordingIndicator');
+        const progress = document.getElementById('progress');
+        const currentTimeEl = document.getElementById('currentTime');
+        const durationEl = document.getElementById('duration');
+
+        // Элементы управления
+        const vizType = document.getElementById('vizType');
+        const barCount = document.getElementById('barCount');
+        const primaryColor = document.getElementById('primaryColor');
+        const secondaryColor = document.getElementById('secondaryColor');
+        const bgColor = document.getElementById('bgColor');
+        const sensitivity = document.getElementById('sensitivity');
+        const smoothness = document.getElementById('smoothness');
+        const showWaveform = document.getElementById('showWaveform');
+        const videoQuality = document.getElementById('videoQuality');
+        const fps = document.getElementById('fps');
+
+        const ctx = previewCanvas.getContext('2d');
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let audioElement = new Audio();
+        let sourceNode, analyser, dataArray, bufferLength;
+
+        // Переменные для записи
+        let capturer;
+        let isRecording = false;
+        let recordedChunks = [];
+        let mediaRecorder;
+
+        // Настройки визуализации
+        const settings = {
+            type: 'bars',
+            barCount: 64,
+            primaryColor: '#4ecdc4',
+            secondaryColor: '#ff6b6b',
+            bgColor: '#000000',
+            sensitivity: 5,
+            smoothness: 0.5,
+            showWaveform: true,
+            quality: 720,
+            fps: 30
+        };
+
+        // Инициализация canvas
+        function initCanvas() {
+            const width = previewCanvas.offsetWidth;
+            const height = previewCanvas.offsetHeight;
+            
+            previewCanvas.width = width;
+            previewCanvas.height = height;
+        }
+
+        // Инициализация аудиоанализатора
+        function initAudioAnalyzer() {
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 1024;
+            bufferLength = analyser.frequencyBinCount;
+            dataArray = new Uint8Array(bufferLength);
+
+            sourceNode = audioContext.createMediaElementSource(audioElement);
+            sourceNode.connect(analyser);
+            analyser.connect(audioContext.destination);
+        }
+
+        // Визуализация вертикальных баров
+        function drawBars() {
+            analyser.getByteFrequencyData(dataArray);
+
+            ctx.fillStyle = settings.bgColor;
+            ctx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+            const barWidth = (previewCanvas.width / settings.barCount) * 0.8;
+            const gap = (previewCanvas.width / settings.barCount) * 0.2;
+            let x = 0;
+
+            for (let i = 0; i < settings.barCount; i++) {
+                const barIndex = Math.floor(i * (bufferLength / settings.barCount));
+                let barHeight = (dataArray[barIndex] / 255) * previewCanvas.height * settings.sensitivity;
+
+                // Сглаживание
+                barHeight = barHeight * settings.smoothness + (window.lastBarHeights?.[i] || 0) * (1 - settings.smoothness);
+                window.lastBarHeights = window.lastBarHeights || [];
+                window.lastBarHeights[i] = barHeight;
+
+                const gradient = ctx.createLinearGradient(0, previewCanvas.height, 0, previewCanvas.height - barHeight);
+                gradient.addColorStop(0, settings.primaryColor);
+                gradient.addColorStop(1, settings.secondaryColor);
+
+                ctx.fillStyle = gradient;
+                ctx.fillRect(x, previewCanvas.height - barHeight, barWidth, barHeight);
+
+                x += barWidth + gap;
+            }
+
+            if (settings.showWaveform) {
+                drawWaveformOverlay();
+            }
+        }
+
+        // Визуализация волновой формы
+        function drawWaveform() {
+            analyser.getByteTimeDomainData(dataArray);
+
+            ctx.fillStyle = settings.bgColor;
+            ctx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = settings.primaryColor;
+            ctx.beginPath();
+
+            const sliceWidth = previewCanvas.width / bufferLength;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                const v = dataArray[i] / 128.0;
+                const y = v * previewCanvas.height / 2;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+
+                x += sliceWidth;
+            }
+
+            ctx.stroke();
+        }
+
+        // Круговая визуализация
+        function drawCircle() {
+            analyser.getByteFrequencyData(dataArray);
+
+            ctx.fillStyle = settings.bgColor;
+            ctx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+            const centerX = previewCanvas.width / 2;
+            const centerY = previewCanvas.height / 2;
+            const radius = Math.min(centerX, centerY) * 0.8;
+
+            ctx.lineWidth = 3;
+
+            for (let i = 0; i < settings.barCount; i++) {
+                const angle = (i / settings.barCount) * Math.PI * 2;
+                const barIndex = Math.floor(i * (bufferLength / settings.barCount));
+                const barHeight = (dataArray[barIndex] / 255) * radius * 0.5 * settings.sensitivity;
+
+                const gradient = ctx.createLinearGradient(
+                    centerX, centerY,
+                    centerX + Math.cos(angle) * radius,
+                    centerY + Math.sin(angle) * radius
+                );
+                gradient.addColorStop(0, settings.primaryColor);
+                gradient.addColorStop(1, settings.secondaryColor);
+
+                ctx.strokeStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius + barHeight, angle, angle + (Math.PI * 2 / settings.barCount) * 0.8);
+                ctx.stroke();
+            }
+        }
+
+        // Наложение волновой формы
+        function drawWaveformOverlay() {
+            analyser.getByteTimeDomainData(dataArray);
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+
+            const sliceWidth = previewCanvas.width / bufferLength;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                const v = dataArray[i] / 128.0;
+                const y = v * previewCanvas.height / 2;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+
+                x += sliceWidth;
+            }
+
+            ctx.stroke();
+        }
+
+        // Основной цикл визуализации
+        function drawVisualizer() {
+            requestAnimationFrame(drawVisualizer);
+
+            if (!analyser) return;
+
+            switch (settings.type) {
+                case 'bars':
+                    drawBars();
+                    break;
+                case 'wave':
+                    drawWaveform();
+                    break;
+                case 'circle':
+                    drawCircle();
+                    break;
+                case 'particles':
+                    drawBars(); // Упрощенная версия частиц
+                    break;
+            }
+
+            // Если идет запись, добавляем кадр
+            if (isRecording && capturer) {
+                capturer.capture(previewCanvas);
+            }
+        }
+
+        // Начало записи видео
+        function startRecording() {
+            const qualityMap = {
+                '480': { width: 854, height: 480 },
+                '720': { width: 1280, height: 720 },
+                '1080': { width: 1920, height: 1080 }
+            };
+
+            const quality = qualityMap[settings.quality];
+            
+            capturer = new CCapture({
+                format: 'webm',
+                framerate: settings.fps,
+                quality: 100,
+                width: quality.width,
+                height: quality.height,
+                verbose: true
+            });
+
+            capturer.start();
+            isRecording = true;
+            recordBtn.textContent = '⏹️ Остановить запись';
+            recordBtn.classList.add('recording');
+            recordingIndicator.classList.add('recording');
+            downloadBtn.disabled = true;
+        }
+
+        // Остановка записи и создание видео
+        function stopRecording() {
+            isRecording = false;
+            capturer.stop();
+            capturer.save(function(blob) {
+                const url = URL.createObjectURL(blob);
+                downloadBtn.disabled = false;
+                downloadBtn.onclick = function() {
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `визуализация-${Date.now()}.webm`;
+                    a.click();
+                };
+            });
+
+            recordBtn.textContent = '🎥 Начать запись';
+            recordBtn.classList.remove('recording');
+            recordingIndicator.classList.remove('recording');
+        }
+
+        // Форматирование времени
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Обновление прогресса
+        function updateProgress() {
+            const percent = (audioElement.currentTime / audioElement.duration) * 100;
+            progress.style.width = percent + '%';
+            currentTimeEl.textContent = formatTime(audioElement.currentTime);
+        }
+
+        // Обработчики событий
+        uploadBtn.addEventListener('click', () => audioUpload.click());
+
+        audioUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const url = URL.createObjectURL(file);
+            audioElement.src = url;
+            
+            trackInfo.textContent = `🎵 ${file.name}`;
+            
+            audioElement.addEventListener('loadedmetadata', () => {
+                durationEl.textContent = formatTime(audioElement.duration);
+                initAudioAnalyzer();
+            });
+
+            audioElement.addEventListener('timeupdate', updateProgress);
+        });
+
+        recordBtn.addEventListener('click', function() {
+            if (audioElement.src === '') {
+                alert('Сначала загрузите аудиофайл!');
+                return;
+            }
+
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+                if (audioElement.paused) {
+                    audioElement.play();
+                }
+            }
+        });
+
+        // Обновление настроек в реальном времени
+        vizType.addEventListener('change', () => settings.type = vizType.value);
+        barCount.addEventListener('input', () => {
+            settings.barCount = barCount.value;
+            barCount.nextElementSibling.textContent = barCount.value;
+        });
+        primaryColor.addEventListener('change', () => settings.primaryColor = primaryColor.value);
+        secondaryColor.addEventListener('change', () => settings.secondaryColor = secondaryColor.value);
+        bgColor.addEventListener('change', () => settings.bgColor = bgColor.value);
+        sensitivity.addEventListener('input', () => {
+            settings.sensitivity = sensitivity.value;
+            sensitivity.nextElementSibling.textContent = sensitivity.value;
+        });
+        smoothness.addEventListener('input', () => {
+            settings.smoothness = smoothness.value;
+            smoothness.nextElementSibling.textContent = smoothness.value;
+        });
+        showWaveform.addEventListener('change', () => settings.showWaveform = showWaveform.checked);
+        videoQuality.addEventListener('change', () => settings.quality = videoQuality.value);
+        fps.addEventListener('input', () => {
+            settings.fps = fps.value;
+            fps.nextElementSibling.textContent = fps.value;
+        });
+
+        // Инициализация
+        window.addEventListener('load', function() {
+            initCanvas();
+            drawVisualizer();
+            window.addEventListener('resize', initCanvas);
+        });
+
+        // Установка начальных значений
+        barCount.nextElementSibling.textContent = barCount.value;
+        sensitivity.nextElementSibling.textContent = sensitivity.value;
+        smoothness.nextElementSibling.textContent = smoothness.value;
+        fps.nextElementSibling.textContent = fps.value;
+    </script>
+</body>
+  </html>
