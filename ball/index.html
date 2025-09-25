@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BounceFlow - Шарик в круге</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .game-container {
+            position: relative;
+            width: 100vmin;
+            height: 100vmin;
+            max-width: 600px;
+            max-height: 600px;
+        }
+
+        #gameCanvas {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+            border: 3px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 30px;
+        }
+
+        .score-container {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 30px;
+            border-radius: 25px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .score {
+            font-size: 3em;
+            font-weight: bold;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+
+        .multiplier {
+            font-size: 1.2em;
+            color: #4ecdc4;
+            text-align: center;
+            margin-top: 5px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+            pointer-events: all;
+        }
+
+        .control-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: transform 0.3s;
+            pointer-events: all;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            border: 3px solid #ff6b6b;
+            display: none;
+            backdrop-filter: blur(10px);
+        }
+
+        .game-over h2 {
+            color: #ff6b6b;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        .final-score {
+            font-size: 4em;
+            color: #4ecdc4;
+            margin: 20px 0;
+        }
+
+        .particle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: float 1s ease-out forwards;
+        }
+
+        @keyframes float {
+            to {
+                transform: translate(var(--tx), var(--ty)) scale(0);
+                opacity: 0;
+            }
+        }
+
+        .combo-popup {
+            position: absolute;
+            font-size: 2em;
+            font-weight: bold;
+            color: #ffd700;
+            animation: popup 0.5s ease-out;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        @keyframes popup {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+
+        .speed-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .speed-text {
+            color: #45b7d1;
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div class="ui-overlay">
+            <div class="score-container">
+                <div class="score" id="score">0</div>
+                <div class="multiplier" id="multiplier">x1</div>
+            </div>
+            
+            <div class="controls">
+                <button class="control-btn" id="startBtn">🎮 Старт</button>
+                <button class="control-btn" id="restartBtn" style="display: none;">🔄 Заново</button>
+            </div>
+        </div>
+
+        <div class="speed-indicator">
+            <div class="speed-text">Скорость: <span id="speedValue">1.0x</span></div>
+        </div>
+
+        <div class="game-over" id="gameOver">
+            <h2>Игра окончена!</h2>
+            <div class="final-score" id="finalScore">0</div>
+            <button class="control-btn" id="playAgainBtn">🎯 Играть снова</button>
+        </div>
+    </div>
+
+    <script>
+        // Элементы DOM
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const multiplierEl = document.getElementById('multiplier');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const gameOverScreen = document.getElementById('gameOver');
+        const finalScoreEl = document.getElementById('finalScore');
+        const playAgainBtn = document.getElementById('playAgainBtn');
+        const speedValue = document.getElementById('speedValue');
+
+        // Настройки игры
+        const game = {
+            width: 0,
+            height: 0,
+            centerX: 0,
+            centerY: 0,
+            radius: 0,
+            isRunning: false,
+            score: 0,
+            multiplier: 1,
+            speed: 1.0,
+            combo: 0,
+            lastComboTime: 0
+        };
+
+        // Шарик
+        const ball = {
+            x: 0,
+            y: 0,
+            radius: 15,
+            speed: 3,
+            velocityX: 0,
+            velocityY: 0,
+            color: '#ff6b6b'
+        };
+
+        // Круги-препятствия
+        let circles = [];
+        let particles = [];
+
+        // Инициализация canvas
+        function initCanvas() {
+            const size = Math.min(window.innerWidth, window.innerHeight) * 0.9;
+            canvas.width = size;
+            canvas.height = size;
+            
+            game.width = size;
+            game.height = size;
+            game.centerX = size / 2;
+            game.centerY = size / 2;
+            game.radius = size / 2 - 10;
+
+            // Позиционируем шарик в центре
+            ball.x = game.centerX;
+            ball.y = game.centerY;
+            
+            // Случайное начальное направление
+            const angle = Math.random() * Math.PI * 2;
+            ball.velocityX = Math.cos(angle) * ball.speed;
+            ball.velocityY = Math.sin(angle) * ball.speed;
+        }
+
+        // Создание кругов-препятствий
+        function createCircles() {
+            circles = [];
+            const circleCount = 5 + Math.floor(game.score / 100); // Увеличиваем количество с прогрессом
+            
+            for (let i = 0; i < circleCount; i++) {
+                const radius = 20 + Math.random() * 30;
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 50 + Math.random() * (game.radius - radius - 100);
+                
+                circles.push({
+                    x: game.centerX + Math.cos(angle) * distance,
+                    y: game.centerY + Math.sin(angle) * distance,
+                    radius: radius,
+                    color: `hsl(${Math.random() * 360}, 70%, 60%)`,
+                    passed: false
+                });
+            }
+        }
+
+        // Создание частиц эффекта
+        function createParticles(x, y, color, count = 10) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    color: color,
+                    size: Math.random() * 5 + 2,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 1.0
+                });
+            }
+        }
+
+        // Создание попапа комбо
+        function createComboPopup(x, y, text) {
+            const popup = document.createElement('div');
+            popup.className = 'combo-popup';
+            popup.textContent = text;
+            popup.style.left = x + 'px';
+            popup.style.top = y + 'px';
+            document.body.appendChild(popup);
+            
+            setTimeout(() => popup.remove(), 500);
+        }
+
+        // Проверка столкновений
+        function checkCollisions() {
+            // Столкновение с границей круга
+            const distanceToCenter = Math.sqrt(
+                Math.pow(ball.x - game.centerX, 2) + Math.pow(ball.y - game.centerY, 2)
+            );
+            
+            if (distanceToCenter + ball.radius > game.radius) {
+                // Отскок от границы
+                const angle = Math.atan2(ball.y - game.centerY, ball.x - game.centerX);
+                ball.x = game.centerX + Math.cos(angle) * (game.radius - ball.radius);
+                ball.y = game.centerY + Math.sin(angle) * (game.radius - ball.radius);
+                
+                // Отражение вектора скорости
+                const dotProduct = ball.velocityX * Math.cos(angle) + ball.velocityY * Math.sin(angle);
+                ball.velocityX -= 2 * dotProduct * Math.cos(angle);
+                ball.velocityY -= 2 * dotProduct * Math.sin(angle);
+                
+                createParticles(ball.x, ball.y, '#ffffff', 8);
+                game.combo = 0;
+                updateMultiplier();
+            }
+
+            // Проверка прохождения через круги
+            circles.forEach(circle => {
+                if (!circle.passed) {
+                    const distance = Math.sqrt(
+                        Math.pow(ball.x - circle.x, 2) + Math.pow(ball.y - circle.y, 2)
+                    );
+                    
+                    if (distance < ball.radius + circle.radius) {
+                        // Столкновение - конец игры
+                        endGame();
+                    } else if (distance < circle.radius) {
+                        // Шарик прошел через круг
+                        circle.passed = true;
+                        game.score += 10 * game.multiplier;
+                        game.combo++;
+                        
+                        if (Date.now() - game.lastComboTime < 2000) {
+                            game.combo++;
+                        }
+                        game.lastComboTime = Date.now();
+                        
+                        updateMultiplier();
+                        createParticles(circle.x, circle.y, circle.color, 15);
+                        
+                        if (game.combo % 5 === 0) {
+                            createComboPopup(circle.x, circle.y, `COMBO x${game.combo}!`);
+                        }
+                    }
+                }
+            });
+
+            // Увеличение скорости и размера с прогрессом
+            if (game.score > 0 && game.score % 50 === 0) {
+                game.speed += 0.1;
+                ball.radius = Math.min(30, 15 + game.score / 200); // Максимальный размер 30
+                speedValue.textContent = game.speed.toFixed(1) + 'x';
+            }
+        }
+
+        // Обновление множителя
+        function updateMultiplier() {
+            game.multiplier = 1 + Math.floor(game.combo / 3);
+            multiplierEl.textContent = `x${game.multiplier}`;
+        }
+
+        // Основной игровой цикл
+        function gameLoop() {
+            if (!game.isRunning) return;
+            
+            // Очистка canvas
+            ctx.fillStyle = 'rgba(15, 12, 41, 0.1)';
+            ctx.fillRect(0, 0, game.width, game.height);
+            
+            // Рисование границы круга
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(game.centerX, game.centerY, game.radius, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Рисование кругов-препятствий
+            circles.forEach(circle => {
+                ctx.fillStyle = circle.passed ? 'rgba(100, 100, 100, 0.3)' : circle.color;
+                ctx.beginPath();
+                ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                if (!circle.passed) {
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            });
+            
+            // Обновление позиции шарика
+            ball.x += ball.velocityX * game.speed;
+            ball.y += ball.velocityY * game.speed;
+            
+            // Проверка столкновений
+            checkCollisions();
+            
+            // Рисование шарика
+            const gradient = ctx.createRadialGradient(
+                ball.x - 5, ball.y - 5, 0,
+                ball.x, ball.y, ball.radius
+            );
+            gradient.addColorStop(0, '#ffffff');
+            gradient.addColorStop(1, ball.color);
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Обновление частиц
+            particles.forEach((particle, index) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.life -= 0.02;
+                
+                ctx.fillStyle = particle.color;
+                ctx.globalAlpha = particle.life;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+            ctx.globalAlpha = 1;
+            
+            // Обновление счета
+            scoreEl.textContent = game.score;
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Начало игры
+        function startGame() {
+            game.isRunning = true;
+            game.score = 0;
+            game.multiplier = 1;
+            game.speed = 1.0;
+            game.combo = 0;
+            ball.radius = 15;
+            
+            scoreEl.textContent = '0';
+            multiplierEl.textContent = 'x1';
+            speedValue.textContent = '1.0x';
+            
+            startBtn.style.display = 'none';
+            restartBtn.style.display = 'block';
+            gameOverScreen.style.display = 'none';
+            
+            createCircles();
+            gameLoop();
+        }
+
+        // Конец игры
+        function endGame() {
+            game.isRunning = false;
+            finalScoreEl.textContent = game.score;
+            gameOverScreen.style.display = 'block';
+            
+            // Эффект взрыва
+            createParticles(ball.x, ball.y, ball.color, 30);
+        }
+
+        // Обработчики событий
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+        playAgainBtn.addEventListener('click', startGame);
+
+        // Управление касаниями для мобильных устройств
+        canvas.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            // Можно добавить управление наклоном или тапами
+        });
+
+        // Инициализация
+        window.addEventListener('load', function() {
+            initCanvas();
+            window.addEventListener('resize', initCanvas);
+            
+            // Создаем начальные круги для демонстрации
+            createCircles();
+            
+            // Демо-анимация до начала игры
+            function demoAnimation() {
+                if (!game.isRunning) {
+                    ctx.fillStyle = 'rgba(15, 12, 41, 0.1)';
+                    ctx.fillRect(0, 0, game.width, game.height);
+                    
+                    // Рисуем границу
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(game.centerX, game.centerY, game.radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                    
+                    // Анимируем шарик
+                    const time = Date.now() * 0.001;
+                    ball.x = game.centerX + Math.cos(time) * 100;
+                    ball.y = game.centerY + Math.sin(time) * 100;
+                    
+                    const gradient = ctx.createRadialGradient(
+                        ball.x - 5, ball.y - 5, 0,
+                        ball.x, ball.y, ball.radius
+                    );
+                    gradient.addColorStop(0, '#ffffff');
+                    gradient.addColorStop(1, ball.color);
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    requestAnimationFrame(demoAnimation);
+                }
+            }
+            demoAnimation();
+        });
+    </script>
+</body>
+  </html>
