@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Генератор Telegram юзернеймов</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.2em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .username-display {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 25px 0;
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #495057;
+            word-break: break-all;
+        }
+
+        .username-link {
+            color: #007bff;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .username-link:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+
+        .generate-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            margin-bottom: 25px;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .action-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+            max-width: 180px;
+        }
+
+        .occupied-btn {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .occupied-btn:hover {
+            background: #ff5252;
+            transform: translateY(-2px);
+        }
+
+        .free-btn {
+            background: #51cf66;
+            color: white;
+        }
+
+        .free-btn:hover {
+            background: #40c057;
+            transform: translateY(-2px);
+        }
+
+        .lists-container {
+            display: flex;
+            gap: 20px;
+            text-align: left;
+        }
+
+        .list {
+            flex: 1;
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .list h3 {
+            margin-bottom: 15px;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 8px;
+        }
+
+        .list-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .remove-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 3px 8px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 25px;
+            }
+            
+            .lists-container {
+                flex-direction: column;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .action-btn {
+                max-width: 100%;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Генератор Telegram юзернеймов</h1>
+        <p class="subtitle">Формат: ab_cd.t.me</p>
+        
+        <div class="username-display" id="usernameDisplay">
+            Нажмите "Сгенерировать"
+        </div>
+        
+        <button class="generate-btn" id="generateBtn">Сгенерировать</button>
+        
+        <div class="action-buttons">
+            <button class="action-btn occupied-btn" id="occupiedBtn">Занятые</button>
+            <button class="action-btn free-btn" id="freeBtn">Свободные (занять)</button>
+        </div>
+        
+        <div class="lists-container">
+            <div class="list">
+                <h3>Занятые</h3>
+                <div id="occupiedList"></div>
+            </div>
+            <div class="list">
+                <h3>Свободные</h3>
+                <div id="freeList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Элементы DOM
+        const usernameDisplay = document.getElementById('usernameDisplay');
+        const generateBtn = document.getElementById('generateBtn');
+        const occupiedBtn = document.getElementById('occupiedBtn');
+        const freeBtn = document.getElementById('freeBtn');
+        const occupiedList = document.getElementById('occupiedList');
+        const freeList = document.getElementById('freeList');
+
+        // Текущий сгенерированный юзернейм
+        let currentUsername = '';
+
+        // Загрузка данных из localStorage
+        let occupiedUsernames = JSON.parse(localStorage.getItem('occupiedUsernames')) || [];
+        let freeUsernames = JSON.parse(localStorage.getItem('freeUsernames')) || [];
+
+        // Функция генерации случайной английской буквы
+        function getRandomLetter() {
+            const letters = 'abcdefghijklmnopqrstuvwxyz';
+            return letters[Math.floor(Math.random() * letters.length)];
+        }
+
+        // Функция генерации случайного символа (буква или цифра)
+        function getRandomChar() {
+            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            return chars[Math.floor(Math.random() * chars.length)];
+        }
+
+        // Функция генерации юзернейма в формате ab_cd
+        function generateUsername() {
+            const a = getRandomLetter(); // Только буква
+            const b = getRandomChar();   // Буква или цифра
+            const c = getRandomChar();   // Буква или цифра
+            const d = getRandomLetter(); // Только буква
+            
+            return `${a}${b}_${c}${d}`;
+        }
+
+        // Функция обновления отображения юзернейма
+        function updateUsernameDisplay() {
+            currentUsername = generateUsername();
+            usernameDisplay.innerHTML = `<a href="https://${currentUsername}.t.me" class="username-link" target="_blank">${currentUsername}.t.me</a>`;
+        }
+
+        // Функция обновления списков
+        function updateLists() {
+            // Очистка списков
+            occupiedList.innerHTML = '';
+            freeList.innerHTML = '';
+            
+            // Заполнение списка занятых
+            occupiedUsernames.forEach(username => {
+                const item = document.createElement('div');
+                item.className = 'list-item';
+                item.innerHTML = `
+                    <span>${username}.t.me</span>
+                    <button class="remove-btn" data-username="${username}" data-type="occupied">×</button>
+                `;
+                occupiedList.appendChild(item);
+            });
+            
+            // Заполнение списка свободных
+            freeUsernames.forEach(username => {
+                const item = document.createElement('div');
+                item.className = 'list-item';
+                item.innerHTML = `
+                    <span>${username}.t.me</span>
+                    <button class="remove-btn" data-username="${username}" data-type="free">×</button>
+                `;
+                freeList.appendChild(item);
+            });
+            
+            // Добавление обработчиков для кнопок удаления
+            document.querySelectorAll('.remove-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const username = this.getAttribute('data-username');
+                    const type = this.getAttribute('data-type');
+                    
+                    if (type === 'occupied') {
+                        occupiedUsernames = occupiedUsernames.filter(u => u !== username);
+                        localStorage.setItem('occupiedUsernames', JSON.stringify(occupiedUsernames));
+                    } else {
+                        freeUsernames = freeUsernames.filter(u => u !== username);
+                        localStorage.setItem('freeUsernames', JSON.stringify(freeUsernames));
+                    }
+                    
+                    updateLists();
+                });
+            });
+        }
+
+        // Обработчики событий
+        generateBtn.addEventListener('click', updateUsernameDisplay);
+        
+        occupiedBtn.addEventListener('click', function() {
+            if (currentUsername && !occupiedUsernames.includes(currentUsername) && !freeUsernames.includes(currentUsername)) {
+                occupiedUsernames.push(currentUsername);
+                localStorage.setItem('occupiedUsernames', JSON.stringify(occupiedUsernames));
+                updateLists();
+                updateUsernameDisplay(); // Генерируем новый после добавления
+            }
+        });
+        
+        freeBtn.addEventListener('click', function() {
+            if (currentUsername && !occupiedUsernames.includes(currentUsername) && !freeUsernames.includes(currentUsername)) {
+                freeUsernames.push(currentUsername);
+                localStorage.setItem('freeUsernames', JSON.stringify(freeUsernames));
+                updateLists();
+                updateUsernameDisplay(); // Генерируем новый после добавления
+            }
+        });
+
+        // Инициализация
+        updateLists();
+        updateUsernameDisplay();
+    </script>
+</body>
+  </html>
