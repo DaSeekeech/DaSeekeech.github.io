@@ -1,0 +1,41 @@
+:root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8f9fa;
+    --bg-tertiary: #e9ecef;
+    --text-primary: #212529;
+    --text-secondary: #6c757d;
+    --accent-color: #007acc;
+    --border-color: #dee2e6;
+    --success-color: #28a745;
+    --error-color: #dc3545;
+    --warning-color: #ffc107;
+    --shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+/* Специфические настройки для светлой темы */
+.preview-content {
+    background: white;
+}
+
+.csv-table {
+    border: 1px solid var(--border-color);
+}
+
+.csv-table td {
+    border: 1px solid var(--border-color);
+}
+
+.parse-error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.json-error {
+    background: var(--bg-secondary);
+    border-left-color: var(--error-color);
+}
