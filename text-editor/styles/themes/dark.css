@@ -1,0 +1,18 @@
+:root {
+    --bg-primary: #1e1e1e;
+    --bg-secondary: #252526;
+    --bg-tertiary: #2d2d30;
+    --text-primary: #d4d4d4;
+    --text-secondary: #969696;
+    --accent-color: #007acc;
+    --border-color: #3e3e42;
+    --success-color: #4ec9b0;
+    --error-color: #f44747;
+    --warning-color: #ce9178;
+    --shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
