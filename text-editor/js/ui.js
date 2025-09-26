@@ -1,4 +1,4 @@
-// === УПРАВЛЕНИЕ ИНТЕРФЕЙСОМ - ПОЛНАЯ ВЕРСИЯ ===
+// === УПРАВЛЕНИЕ ИНТЕРФЕЙСОМ - ИСПРАВЛЕННАЯ ВЕРСИЯ ===
 
 class UIManager {
     constructor() {
@@ -7,39 +7,48 @@ class UIManager {
         this.tipsVisible = false;
         this.isMobile = window.innerWidth <= 768;
         
+        console.log('⟨UI⟩ Инициализация менеджера интерфейса');
         this.initializeTheme();
         this.setupMobileDetection();
         this.setupGlobalEventListeners();
     }
 
     setupMobileDetection() {
-        // Определение мобильного устройства при загрузке и изменении размера
         const checkMobile = () => {
+            const wasMobile = this.isMobile;
             this.isMobile = window.innerWidth <= 768;
-            this.handleMobileLayout();
+            
+            if (wasMobile !== this.isMobile) {
+                console.log(`⟨UI⟩ Изменение режима: ${this.isMobile ? 'мобильный' : 'десктоп'}`);
+                this.handleMobileLayout();
+            }
         };
 
         window.addEventListener('resize', checkMobile);
-        checkMobile(); // Initial check
+        checkMobile();
     }
 
     handleMobileLayout() {
         const appContainer = document.querySelector('.app-container');
-        if (!appContainer) return;
+        if (!appContainer) {
+            console.error('⟨UI⟩ Не найден app-container');
+            return;
+        }
 
         if (this.isMobile) {
             appContainer.classList.add('mobile-view');
             this.setupMobileMenu();
             this.adaptUIForMobile();
+            console.log('⟨UI⟩ Мобильный интерфейс активирован');
         } else {
             appContainer.classList.remove('mobile-view');
             this.removeMobileMenu();
             this.adaptUIForDesktop();
+            console.log('⟨UI⟩ Десктопный интерфейс активирован');
         }
     }
 
     setupMobileMenu() {
-        // Не создавать меню, если оно уже существует
         if (document.getElementById('mobileMenu')) return;
 
         const mobileMenu = document.createElement('div');
@@ -53,7 +62,6 @@ class UIManager {
             <button class="mobile-btn" data-action="preview" title="Превью">👁️</button>
         `;
 
-        // Вставляем меню перед status-bar
         const statusBar = document.querySelector('.status-bar');
         if (statusBar) {
             statusBar.parentNode.insertBefore(mobileMenu, statusBar);
@@ -61,45 +69,40 @@ class UIManager {
             document.querySelector('.app-container').appendChild(mobileMenu);
         }
 
-        // Обработчики для мобильных кнопок
         mobileMenu.querySelectorAll('.mobile-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const action = e.currentTarget.dataset.action;
                 this.handleMobileAction(action);
             });
         });
+        
+        console.log('⟨UI⟩ Мобильное меню создано');
     }
 
     removeMobileMenu() {
         const mobileMenu = document.getElementById('mobileMenu');
         if (mobileMenu) {
             mobileMenu.remove();
+            console.log('⟨UI⟩ Мобильное меню удалено');
         }
     }
 
     adaptUIForMobile() {
-        // Скрываем некоторые элементы на мобильных
         const toolbar = document.querySelector('.toolbar');
-        if (toolbar) {
-            toolbar.style.display = 'none';
-        }
-
-        // Увеличиваем область редактирования
         const editor = document.getElementById('textEditor');
+        
+        if (toolbar) toolbar.style.display = 'none';
         if (editor) {
-            editor.style.fontSize = '16px'; // Улучшает читаемость на мобильных
+            editor.style.fontSize = '16px';
             editor.style.minHeight = '50vh';
         }
     }
 
     adaptUIForDesktop() {
-        // Восстанавливаем скрытые элементы
         const toolbar = document.querySelector('.toolbar');
-        if (toolbar) {
-            toolbar.style.display = 'flex';
-        }
-
         const editor = document.getElementById('textEditor');
+        
+        if (toolbar) toolbar.style.display = 'flex';
         if (editor) {
             editor.style.fontSize = '14px';
             editor.style.minHeight = 'auto';
@@ -107,6 +110,8 @@ class UIManager {
     }
 
     handleMobileAction(action) {
+        console.log(`⟨UI⟩ Мобильное действие: ${action}`);
+        
         switch(action) {
             case 'open':
                 document.getElementById('fileInput').click();
@@ -124,17 +129,12 @@ class UIManager {
                 this.showTips(currentFormat);
                 break;
             case 'preview':
-                const previewToggle = document.getElementById('previewToggle');
-                if (previewToggle) {
-                    previewToggle.checked = !previewToggle.checked;
-                    this.togglePreview();
-                }
+                this.togglePreview();
                 break;
         }
     }
 
     setupGlobalEventListeners() {
-        // Закрытие подсказок по клику вне области
         document.addEventListener('click', (e) => {
             const tipsPanel = document.getElementById('tipsPanel');
             const formatHelp = document.getElementById('formatHelp');
@@ -147,7 +147,6 @@ class UIManager {
             }
         });
 
-        // Закрытие подсказок по ESC
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.tipsVisible) {
                 this.hideTips();
@@ -156,63 +155,119 @@ class UIManager {
     }
 
     initializeTheme() {
+        console.log('⟨UI⟩ Инициализация темы');
         this.loadPreferences();
         this.applyTheme();
     }
 
     applyTheme() {
-        const themeLink = document.querySelector('link[href*="themes/"]');
-        if (themeLink) {
-            themeLink.href = this.isDarkTheme ? 
-                'styles/themes/dark.css' : 
-                'styles/themes/light.css';
+        console.log(`⟨UI⟩ Применение темы: ${this.isDarkTheme ? 'темная' : 'светлая'}`);
+        
+        // Создаем элемент темы если его нет
+        let themeLink = document.querySelector('link[data-theme]');
+        if (!themeLink) {
+            themeLink = document.createElement('link');
+            themeLink.rel = 'stylesheet';
+            themeLink.setAttribute('data-theme', 'true');
+            document.head.appendChild(themeLink);
+            console.log('⟨UI⟩ Создан новый элемент темы');
         }
+
+        const themeFile = this.isDarkTheme ? 'styles/themes/dark.css' : 'styles/themes/light.css';
+        themeLink.href = themeFile;
         
-        this.updateThemeButton();
-        this.updateSyntaxHighlighting();
+        // Добавляем временную метку для избежания кэширования
+        themeLink.href += `?t=${Date.now()}`;
         
-        // Применяем тему ко всему документу
-        document.documentElement.setAttribute('data-theme', this.isDarkTheme ? 'dark' : 'light');
+        console.log(`⟨UI⟩ Установлена тема: ${themeFile}`);
+
+        // Ждем загрузки CSS перед обновлением интерфейса
+        themeLink.onload = () => {
+            console.log('⟨UI⟩ Тема загружена, обновление интерфейса');
+            this.updateThemeButton();
+            this.updateSyntaxHighlighting();
+            this.applyThemeToBody();
+        };
+
+        themeLink.onerror = () => {
+            console.error('⟨UI⟩ Ошибка загрузки темы');
+            this.showError('Ошибка загрузки темы', 'Проверьте наличие CSS файлов');
+        };
+    }
+
+    applyThemeToBody() {
+        document.body.setAttribute('data-theme', this.isDarkTheme ? 'dark' : 'light');
+        document.body.style.backgroundColor = 'var(--bg-primary)';
+        document.body.style.color = 'var(--text-primary)';
+        
+        // Принудительно обновляем стили всех элементов
+        this.forceStyleUpdate();
+    }
+
+    forceStyleUpdate() {
+        // Принудительное обновление стилей для всех основных элементов
+        const elementsToUpdate = [
+            '.editor-header', '.toolbar', '.editor-container', 
+            '.status-bar', '.btn-primary', '.btn-secondary'
+        ];
+        
+        elementsToUpdate.forEach(selector => {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(el => {
+                el.style.display = 'block';
+                setTimeout(() => {
+                    el.style.display = '';
+                }, 10);
+            });
+        });
     }
 
     updateThemeButton() {
         const themeButton = document.getElementById('themeToggle');
         if (themeButton) {
-            themeButton.textContent = this.isDarkTheme ? '🌙 Тёмная' : '☀️ Светлая';
-            themeButton.title = this.isDarkTheme ? 'Переключить на светлую тему' : 'Переключить на темную тему';
+            const newText = this.isDarkTheme ? '☀️ Светлая' : '🌙 Тёмная';
+            const newTitle = this.isDarkTheme ? 'Переключить на светлую тему' : 'Переключить на темную тему';
             
-            // Обновляем мобильную кнопку темы
-            const mobileThemeBtn = document.querySelector('.mobile-btn[data-action="theme"]');
-            if (mobileThemeBtn) {
-                mobileThemeBtn.textContent = this.isDarkTheme ? '🌙' : '☀️';
-                mobileThemeBtn.title = this.isDarkTheme ? 'Светлая тема' : 'Тёмная тема';
-            }
+            themeButton.textContent = newText;
+            themeButton.title = newTitle;
+            
+            console.log(`⟨UI⟩ Кнопка темы обновлена: ${newText}`);
+        }
+
+        const mobileThemeBtn = document.querySelector('.mobile-btn[data-action="theme"]');
+        if (mobileThemeBtn) {
+            mobileThemeBtn.textContent = this.isDarkTheme ? '🌙' : '☀️';
+            mobileThemeBtn.title = this.isDarkTheme ? 'Светлая тема' : 'Тёмная тема';
         }
     }
 
     toggleTheme() {
+        console.log('⟨UI⟩ Переключение темы');
         this.isDarkTheme = !this.isDarkTheme;
         this.applyTheme();
         this.savePreferences();
+        this.showNotification(`Тема изменена на ${this.isDarkTheme ? 'тёмную' : 'светлую'}`, 'success');
     }
 
     updateSyntaxHighlighting() {
-        // Обновляем тему highlight.js при смене темы приложения
         if (typeof hljs !== 'undefined') {
-            const link = document.querySelector('link[href*="highlight.js"]');
-            if (link) {
-                const newTheme = this.isDarkTheme ? 
-                    'github-dark.min.css' : 
-                    'github.min.css';
-                link.href = `https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/${newTheme}`;
-            }
+            console.log('⟨UI⟩ Обновление подсветки синтаксиса');
             
-            // Переприменяем подсветку ко всем блокам кода
-            setTimeout(() => {
-                document.querySelectorAll('pre code').forEach((block) => {
-                    hljs.highlightElement(block);
-                });
-            }, 150);
+            const newTheme = this.isDarkTheme ? 'github-dark' : 'github';
+            const highlightLink = document.querySelector('link[href*="highlight.js"]');
+            
+            if (highlightLink) {
+                highlightLink.href = `https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/${newTheme}.min.css`;
+                
+                highlightLink.onload = () => {
+                    setTimeout(() => {
+                        document.querySelectorAll('pre code').forEach((block) => {
+                            hljs.highlightElement(block);
+                        });
+                        console.log('⟨UI⟩ Подсветка синтаксиса обновлена');
+                    }, 100);
+                };
+            }
         }
     }
 
@@ -222,13 +277,14 @@ class UIManager {
         const previewPanel = document.getElementById('previewPanel');
         const previewToggle = document.getElementById('previewToggle');
         
+        console.log(`⟨UI⟩ Переключение превью: ${this.isPreviewMode ? 'вкл' : 'выкл'}`);
+
         if (this.isPreviewMode) {
             editorPanel.classList.add('hidden');
             previewPanel.classList.remove('hidden');
             if (previewToggle) previewToggle.checked = true;
             this.updatePreview();
             
-            // Обновляем мобильную кнопку превью
             const mobilePreviewBtn = document.querySelector('.mobile-btn[data-action="preview"]');
             if (mobilePreviewBtn) {
                 mobilePreviewBtn.textContent = '✏️';
@@ -239,7 +295,6 @@ class UIManager {
             previewPanel.classList.add('hidden');
             if (previewToggle) previewToggle.checked = false;
             
-            // Обновляем мобильную кнопку превью
             const mobilePreviewBtn = document.querySelector('.mobile-btn[data-action="preview"]');
             if (mobilePreviewBtn) {
                 mobilePreviewBtn.textContent = '👁️';
@@ -257,32 +312,35 @@ class UIManager {
     }
 
     showTips(format) {
+        console.log(`⟨UI⟩ Показ подсказок для формата: ${format}`);
+        
         this.tipsVisible = true;
         const tipsPanel = document.getElementById('tipsPanel');
         const tipsContent = document.getElementById('tipsContent');
         
-        if (!tipsPanel || !tipsContent) return;
+        if (!tipsPanel || !tipsContent) {
+            console.error('⟨UI⟩ Не найдены элементы подсказок');
+            return;
+        }
         
         const formatTips = new FormatTips();
         tipsContent.innerHTML = formatTips.renderTips(format);
         tipsPanel.classList.remove('hidden');
         tipsPanel.classList.add('fade-in');
         
-        // Добавляем overlay для мобильных
         if (this.isMobile) {
             this.createOverlay();
         }
     }
 
     hideTips() {
+        console.log('⟨UI⟩ Скрытие подсказок');
         this.tipsVisible = false;
         const tipsPanel = document.getElementById('tipsPanel');
         if (tipsPanel) {
             tipsPanel.classList.add('hidden');
             tipsPanel.classList.remove('fade-in');
         }
-        
-        // Удаляем overlay
         this.removeOverlay();
     }
 
@@ -317,7 +375,8 @@ class UIManager {
             statusElement.textContent = text;
             statusElement.className = `file-status status-${type}`;
             
-            // Автоматическое скрытие успешных статусов через 5 секунд
+            console.log(`⟨UI⟩ Статус обновлен: ${text} (${type})`);
+
             if (type === 'success') {
                 setTimeout(() => {
                     if (statusElement.textContent === text) {
@@ -326,8 +385,7 @@ class UIManager {
                     }
                 }, 5000);
             }
-            
-            // Для ошибок показываем дольше
+
             if (type === 'error') {
                 setTimeout(() => {
                     if (statusElement.textContent === text) {
@@ -351,12 +409,10 @@ class UIManager {
             charCount.textContent = `${charCountValue.toLocaleString()} символов`;
             lineCount.textContent = `${lineCountValue} строк`;
             
-            // Подсчет слов (дополнительная информация)
             const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
             charCount.title = `${wordCount.toLocaleString()} слов`;
             lineCount.title = `Последняя строка: ${lines[lines.length - 1]?.length || 0} символов`;
             
-            // Визуальная индикация для больших файлов
             if (charCountValue > 10000) {
                 charCount.style.color = 'var(--warning-color)';
             } else {
@@ -375,8 +431,9 @@ class UIManager {
         
         try {
             localStorage.setItem('seekeechEditorPreferences', JSON.stringify(preferences));
+            console.log('⟨UI⟩ Настройки сохранены:', preferences);
         } catch (error) {
-            console.warn('Не удалось сохранить настройки:', error);
+            console.error('⟨UI⟩ Ошибка сохранения настроек:', error);
         }
     }
 
@@ -388,37 +445,34 @@ class UIManager {
                 this.isDarkTheme = preferences.theme === 'dark';
                 this.isPreviewMode = preferences.preview || false;
                 
-                // Восстановление формата
                 const formatSelector = document.getElementById('formatSelector');
                 if (formatSelector && preferences.lastFormat) {
                     formatSelector.value = preferences.lastFormat;
                 }
                 
-                console.log('Настройки загружены:', preferences);
+                console.log('⟨UI⟩ Настройки загружены:', preferences);
+            } else {
+                console.log('⟨UI⟩ Сохраненных настроек не найдено, используются значения по умолчанию');
             }
         } catch (error) {
-            console.warn('Ошибка загрузки настроек:', error);
-            // Устанавливаем значения по умолчанию при ошибке
+            console.error('⟨UI⟩ Ошибка загрузки настроек:', error);
             this.isDarkTheme = true;
             this.isPreviewMode = false;
         }
     }
 
     showError(message, details = '') {
-        console.error('Ошибка редактора:', message, details);
+        console.error('⟨UI⟩ Ошибка:', message, details);
         this.updateStatus(`Ошибка: ${message}`, 'error');
         
-        // Показать подробности в консоли для разработчика
-        if (details && console.error) {
-            console.error('Детали ошибки:', details);
+        if (details) {
+            console.error('⟨UI⟩ Детали ошибки:', details);
         }
         
-        // Визуальное уведомление для пользователя
         this.showNotification(message, 'error');
     }
 
     showNotification(message, type = 'info', duration = 3000) {
-        // Создаем уведомление, если его нет
         let notification = document.getElementById('globalNotification');
         if (!notification) {
             notification = document.createElement('div');
@@ -437,7 +491,6 @@ class UIManager {
             document.body.appendChild(notification);
         }
         
-        // Устанавливаем стили в зависимости от типа
         const typeStyles = {
             error: 'background: var(--error-color); color: white;',
             success: 'background: var(--success-color); color: white;',
@@ -449,7 +502,6 @@ class UIManager {
         notification.textContent = message;
         notification.classList.add('fade-in');
         
-        // Автоматическое скрытие
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.classList.remove('fade-in');
@@ -461,32 +513,51 @@ class UIManager {
                 }, 300);
             }
         }, duration);
+        
+        console.log(`⟨UI⟩ Уведомление: ${message} (${type})`);
     }
 
-    // Метод для показа загрузки
     showLoading(message = 'Загрузка...') {
         this.updateStatus(message, 'info');
-        
-        // Можно добавить спиннер или индикатор прогресса
         const statusElement = document.getElementById('fileStatus');
         if (statusElement) {
             statusElement.innerHTML = `⏳ ${message}`;
         }
+        console.log(`⟨UI⟩ Показан индикатор загрузки: ${message}`);
     }
 
-    // Метод для скрытия загрузки
     hideLoading() {
         const statusElement = document.getElementById('fileStatus');
         if (statusElement && statusElement.innerHTML.includes('⏳')) {
             statusElement.textContent = 'Готов к работе';
             statusElement.className = 'file-status status-info';
+            console.log('⟨UI⟩ Индикатор загрузки скрыт');
         }
+    }
+
+    // Метод для отладки текущего состояния
+    debugState() {
+        return {
+            isDarkTheme: this.isDarkTheme,
+            isPreviewMode: this.isPreviewMode,
+            tipsVisible: this.tipsVisible,
+            isMobile: this.isMobile,
+            preferences: localStorage.getItem('seekeechEditorPreferences')
+        };
     }
 }
 
-// Добавляем CSS для статусов и анимаций
+// Добавляем улучшенные стили
 const style = document.createElement('style');
 style.textContent = `
+    [data-theme="dark"] {
+        color-scheme: dark;
+    }
+    
+    [data-theme="light"] {
+        color-scheme: light;
+    }
+    
     .status-success { color: var(--success-color) !important; }
     .status-error { color: var(--error-color) !important; }
     .status-warning { color: var(--warning-color) !important; }
@@ -506,10 +577,10 @@ style.textContent = `
     .mobile-btn {
         padding: 0.8rem;
         font-size: 1.2rem;
-        background: none;
-        border: none;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
         cursor: pointer;
-        border-radius: 50%;
+        border-radius: 8px;
         width: 50px;
         height: 50px;
         display: flex;
@@ -519,7 +590,8 @@ style.textContent = `
     }
     
     .mobile-btn:hover {
-        background: var(--border-color);
+        background: var(--accent-color);
+        transform: scale(1.1);
     }
     
     .mobile-btn:active {
@@ -544,16 +616,36 @@ style.textContent = `
         display: none !important;
     }
     
+    /* Принудительное применение темы ко всем элементам */
+    * {
+        transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    }
+    
     /* Улучшенный скролл для мобильных */
     @media (max-width: 768px) {
         .editor-panel, .preview-panel {
             -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
         }
+    }
+    
+    /* Гарантированное применение темы к body */
+    body {
+        background-color: var(--bg-primary) !important;
+        color: var(--text-primary) !important;
+    }
+    
+    /* Гарантированное применение темы к основным контейнерам */
+    .app-container, .editor-header, .toolbar, .editor-container, .status-bar {
+        background-color: var(--bg-primary) !important;
+        color: var(--text-primary) !important;
     }
 `;
 document.head.appendChild(style);
 
+console.log('⟨UI⟩ Стили интерфейса применены');
+
 // Экспорт для использования в других модулях
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = UIManager;
-          }
+        }
