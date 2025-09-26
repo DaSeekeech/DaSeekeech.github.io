@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seekeech Editor v3.0</title>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles/themes/dark.css">
+    <link rel="stylesheet" href="styles/main.css">
+    
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="editor-header">
+            <div class="header-left">
+                <h1>⟨🆔⟩ Seekeech Editor v3.0</h1>
+                <span class="file-status" id="fileStatus">Готов к работе</span>
+            </div>
+            
+            <div class="header-controls">
+                <button id="themeToggle" class="btn-secondary">🌙 Тема</button>
+                <button id="formatHelp" class="btn-info">ℹ️ Подсказки</button>
+            </div>
+        </header>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <input type="file" id="fileInput" accept=".txt,.md,.html,.css,.js,.json,.xml,.csv" hidden>
+            
+            <button id="openFile" class="btn-primary">📁 Открыть</button>
+            <button id="saveFile" class="btn-success">💾 Сохранить</button>
+            
+            <select id="formatSelector" class="format-selector">
+                <option value="plain">Текст (.txt)</option>
+                <option value="markdown">Markdown (.md)</option>
+                <option value="html">HTML (.html)</option>
+                <option value="css">CSS (.css)</option>
+                <option value="javascript">JavaScript (.js)</option>
+                <option value="json">JSON (.json)</option>
+                <option value="xml">XML (.xml)</option>
+                <option value="csv">CSV (.csv)</option>
+            </select>
+            
+            <div class="view-mode">
+                <label class="switch">
+                    <input type="checkbox" id="previewToggle">
+                    <span class="slider">👁️ Превью</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Main Editor Area -->
+        <div class="editor-container">
+            <!-- Editor -->
+            <div class="editor-panel" id="editorPanel">
+                <textarea id="textEditor" placeholder="Откройте файл или начните печатать..."></textarea>
+            </div>
+            
+            <!-- Preview -->
+            <div class="preview-panel hidden" id="previewPanel">
+                <div id="previewContent" class="preview-content"></div>
+            </div>
+        </div>
+
+        <!-- Tips Panel -->
+        <div class="tips-panel hidden" id="tipsPanel">
+            <div class="tips-header">
+                <h3>🎯 Интеллектуальные подсказки</h3>
+                <button id="closeTips" class="btn-close">×</button>
+            </div>
+            <div id="tipsContent" class="tips-content"></div>
+        </div>
+
+        <!-- Status Bar -->
+        <footer class="status-bar">
+            <span id="charCount">0 символов</span>
+            <span id="lineCount">1 строка</span>
+            <span id="currentFormat">Формат: Plain Text</span>
+            <span class="mode-indicator">Режим: ⟨CODER MODE v3⟩</span>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/parsers.js"></script>
+    <script src="js/file-handler.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/editor.js"></script>
+</body>
+      </html>
