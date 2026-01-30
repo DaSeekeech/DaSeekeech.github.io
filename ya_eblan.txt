@@ -1,0 +1,6 @@
+vless://UUID@SERVER_IP:443
+?security=reality
+&flow=xtls-rprx-vision
+&sni=www.cloudflare.com
+&fp=chrome
+&type=tcp
